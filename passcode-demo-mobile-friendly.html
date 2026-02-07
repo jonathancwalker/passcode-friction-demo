@@ -1,0 +1,1250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>iOS Passcode Demo — Normal vs Scrambled + Time Trial</title>
+  <style>
+    :root{
+      --bg1:#0b0f1a;
+      --bg2:#121a2b;
+      --text: rgba(255,255,255,0.92);
+      --shadow: 0 18px 50px rgba(0,0,0,0.55);
+      --radius: 28px;
+      --btnSize: 72px;
+      --gap: 14px;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+              "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --accent: rgba(80,255,160,0.40);
+      --accent2: rgba(80,255,160,0.16);
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(1200px 700px at 20% 10%, rgba(120,150,255,0.28), transparent 60%),
+        radial-gradient(900px 600px at 90% 20%, rgba(110,255,210,0.18), transparent 55%),
+        radial-gradient(900px 700px at 60% 100%, rgba(255,170,210,0.12), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      padding: 22px;
+    }
+
+    .wrap{
+      width:min(980px, 100%);
+      display:grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    /* Phone */
+    .phone{
+      position:relative;
+      border-radius: 38px;
+      padding: 20px 18px 18px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      min-height: 660px;
+    }
+    .phone::before{
+      content:"";
+      position:absolute;
+      inset:-40px;
+      background:
+        radial-gradient(520px 420px at 30% 30%, rgba(255,255,255,0.12), transparent 60%),
+        radial-gradient(560px 440px at 80% 15%, rgba(255,255,255,0.10), transparent 60%),
+        radial-gradient(520px 420px at 55% 85%, rgba(255,255,255,0.08), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      filter: blur(14px);
+      opacity: 0.95;
+      pointer-events:none;
+    }
+
+    .safe{
+      position:relative;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+      padding: 10px 8px 12px;
+      gap: 10px;
+    }
+
+    .status{
+      width:100%;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding: 6px 10px;
+      color: rgba(255,255,255,0.78);
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      font-size: 13px;
+      user-select:none;
+    }
+    .status .right{ display:flex; gap:10px; align-items:center; font-size:12px; opacity:0.92; }
+    .pill{
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.14);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .lock{
+      margin-top: 6px;
+      width: 38px;
+      height: 38px;
+      display:grid;
+      place-items:center;
+      opacity: 0.92;
+    }
+    .lock svg{
+      width: 28px; height: 28px;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,0.45));
+    }
+
+    .title{
+      text-align:center;
+      margin-top: 2px;
+      font-size: 18px;
+      font-weight: 650;
+      letter-spacing: 0.2px;
+      color: rgba(255,255,255,0.90);
+      user-select:none;
+    }
+    .subtitle{
+      text-align:center;
+      font-size: 13px;
+      color: rgba(255,255,255,0.72);
+      user-select:none;
+      line-height: 1.25;
+      padding: 0 10px;
+      min-height: 34px;
+    }
+
+    .chosen{
+      text-align:center;
+      font-size: 13px;
+      color: rgba(255,255,255,0.78);
+      user-select:none;
+      line-height: 1.25;
+      margin-top: 2px;
+    }
+    .chosen code{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 2px 8px;
+      border-radius: 10px;
+      color: rgba(255,255,255,0.92);
+      letter-spacing: 1px;
+      font-size: 13px;
+    }
+
+    .dots{
+      display:flex;
+      gap: 10px;
+      margin: 4px 0 0;
+      height: 18px;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+    }
+    .dot{
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.45);
+      background: rgba(255,255,255,0.08);
+      transition: transform 120ms ease, background 160ms ease, border-color 160ms ease;
+    }
+    .dot.filled{
+      background: rgba(255,255,255,0.92);
+      border-color: rgba(255,255,255,0.92);
+      transform: scale(1.05);
+    }
+
+    .msg{
+      min-height: 20px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.70);
+      text-align:center;
+      user-select:none;
+      padding: 0 10px;
+    }
+    .msg.bad{ color: rgba(255,120,120,0.95); }
+    .msg.good{ color: rgba(80,255,160,0.92); }
+
+    .keypad{
+      margin-top: 4px;
+      display:grid;
+      grid-template-columns: repeat(3, var(--btnSize));
+      justify-content:center;
+      gap: var(--gap);
+      padding: 10px 0 0;
+      width:100%;
+    }
+
+    /* "All-at-once" scramble effect */
+    .keypad.scrambleFlash .key{
+      opacity: 0;
+      transform: scale(0.985);
+      transition: opacity 110ms ease, transform 110ms ease;
+    }
+    .keypad.scrambleShow .key{
+      opacity: 1;
+      transform: scale(1);
+      transition: opacity 140ms ease, transform 140ms ease;
+    }
+
+    .key{
+      width: var(--btnSize);
+      height: var(--btnSize);
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.22);
+      background: rgba(255,255,255,0.14);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap: 2px;
+      cursor:pointer;
+      user-select:none;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        0 10px 26px rgba(0,0,0,0.30);
+      transition: transform 90ms ease, background 140ms ease, border-color 140ms ease;
+      -webkit-tap-highlight-color: transparent;
+      opacity: 1;
+    }
+    .key:active{
+      transform: scale(0.97);
+      background: rgba(255,255,255,0.20);
+      border-color: rgba(255,255,255,0.28);
+    }
+
+    .num{
+      font-size: 26px;
+      font-weight: 650;
+      line-height: 1;
+      letter-spacing: 0.4px;
+      color: rgba(255,255,255,0.92);
+    }
+    .letters{
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.64);
+      margin-left: 2px;
+    }
+    .key.empty{ visibility:hidden; pointer-events:none; }
+
+    .bottomRow{
+      margin-top:auto;
+      width:100%;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding: 10px 12px 4px;
+      user-select:none;
+      font-size: 14px;
+      color: rgba(255,255,255,0.80);
+    }
+    .bottomRow button{
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.84);
+      font-size: 14px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor:pointer;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .bottomRow button:hover{ background: rgba(255,255,255,0.08); }
+    .bottomRow button:active{ background: rgba(255,255,255,0.12); }
+
+    /* Sidebar */
+    .panel{
+      border-radius: var(--radius);
+      padding: 18px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: var(--shadow);
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+    }
+    .panel h2{
+      margin:0;
+      font-size: 16px;
+      font-weight: 780;
+      letter-spacing: 0.2px;
+      color: rgba(255,255,255,0.92);
+    }
+
+    .segmented{
+      display:flex;
+      gap: 6px;
+      padding: 6px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .segmented button{
+      flex:1;
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: rgba(255,255,255,0.78);
+      font-weight: 700;
+      cursor:pointer;
+      transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+    }
+    .segmented button.active{
+      background: rgba(255,255,255,0.14);
+      border-color: rgba(255,255,255,0.14);
+      color: rgba(255,255,255,0.92);
+    }
+
+    .mini{ font-size:12px; color: rgba(255,255,255,0.66); margin: 0; }
+
+    .row{
+      display:flex;
+      gap: 10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .btn{
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.88);
+      font-weight: 700;
+      cursor:pointer;
+      transition: background 120ms ease, border-color 120ms ease, transform 90ms ease, box-shadow 180ms ease;
+    }
+    .btn:hover{ background: rgba(255,255,255,0.14); }
+    .btn:active{ transform: scale(0.99); background: rgba(255,255,255,0.18); }
+
+    /* Reset Everything emphasis */
+    .btn-large{
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 800;
+      border-radius: 16px;
+    }
+    .btn-danger{
+      border-color: rgba(255,120,120,0.45);
+      background: rgba(255,120,120,0.12);
+      color: rgba(255,255,255,0.95);
+    }
+    .btn-danger:hover{
+      background: rgba(255,120,120,0.18);
+    }
+    .btn-danger:active{
+      background: rgba(255,120,120,0.24);
+    }
+
+    /* Pulse highlight */
+    .attn{
+      border-color: var(--accent) !important;
+      background: var(--accent2) !important;
+      box-shadow: 0 0 0 0 rgba(80,255,160,0.35);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0%{ box-shadow: 0 0 0 0 rgba(80,255,160,0.38); }
+      70%{ box-shadow: 0 0 0 16px rgba(80,255,160,0); }
+      100%{ box-shadow: 0 0 0 0 rgba(80,255,160,0); }
+    }
+
+    /* Results */
+    .resultBox{
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.18);
+      color: rgba(255,255,255,0.74);
+      font-size: 13px;
+      line-height: 1.45;
+      display:none;
+    }
+    .resultBox.show{ display:block; }
+    .resultBox b{ color: rgba(255,255,255,0.90); }
+
+    /* Modal */
+    .modalOverlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modalOverlay.show{ display:flex; }
+    .modal{
+      width: min(600px, 100%);
+      border-radius: 22px;
+      background: rgba(20,26,44,0.90);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 22px 70px rgba(0,0,0,0.55);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 16px;
+      color: rgba(255,255,255,0.92);
+    }
+    .modal h3{
+      margin: 6px 6px 8px;
+      font-size: 16px;
+      font-weight: 850;
+      letter-spacing: 0.2px;
+    }
+    .modal p{
+      margin: 0 6px 10px;
+      color: rgba(255,255,255,0.74);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .modal .actions{
+      display:flex;
+      justify-content:flex-end;
+      gap: 10px;
+      padding-top: 8px;
+    }
+    .modal .ghost{
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+    .modal .primary{
+      border-color: var(--accent);
+      background: var(--accent2);
+    }
+    .modal .primary:hover{ background: rgba(80,255,160,0.18); }
+
+    .choiceGroup{
+      margin: 8px 6px 8px;
+      padding: 10px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.18);
+      display:grid;
+      gap: 10px;
+    }
+    .choice{
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      cursor:pointer;
+      user-select:none;
+      color: rgba(255,255,255,0.78);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .choice input{ margin-top: 3px; }
+    .choice b{ color: rgba(255,255,255,0.92); }
+
+    /* =========================
+       MOBILE FRIENDLY CHANGES
+       ========================= */
+    @media (max-width: 900px){
+      /* Stack sidebar above phone so controls are visible */
+      .wrap{
+        display:flex;
+        flex-direction:column;
+        gap: 14px;
+      }
+
+      /* Put panel first on the page */
+      .panel{ order: -1; }
+
+      /* Let phone shrink (remove forced tall height) */
+      .phone{ min-height: auto; }
+
+      /* Shrink keypad buttons + tighten spacing */
+      :root{
+        --btnSize: 58px;
+        --gap: 10px;
+      }
+
+      /* Slightly tighten vertical rhythm */
+      .safe{ padding: 8px 6px 10px; gap: 8px; }
+      .subtitle{ min-height: 0; }
+      .keypad{ padding-top: 6px; }
+
+      /* Optional: make panel stick while scrolling on mobile */
+      /* .panel{
+        position: sticky;
+        top: 12px;
+        z-index: 5; 
+      }*/
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Phone -->
+    <div class="phone" aria-label="Passcode demo phone">
+      <div class="safe">
+        <div class="status">
+          <div class="left"><span class="pill" id="timePill">2:04</span></div>
+          <div class="right"><span class="pill">LTE</span></div>
+        </div>
+
+        <div class="lock" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M7.5 10V7.8C7.5 5.15 9.55 3 12 3C14.45 3 16.5 5.15 16.5 7.8V10"
+                  stroke="rgba(255,255,255,0.9)" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M6.8 10H17.2C18.2 10 19 10.8 19 11.8V18.2C19 19.2 18.2 20 17.2 20H6.8C5.8 20 5 19.2 5 18.2V11.8C5 10.8 5.8 10 6.8 10Z"
+                  stroke="rgba(255,255,255,0.9)" stroke-width="1.7" />
+            <path d="M12 14.2V16.7" stroke="rgba(255,255,255,0.9)" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <div class="title" id="screenTitle">Set a Passcode</div>
+        <div class="subtitle" id="screenSubtitle">Enter a 6-digit passcode to test.</div>
+
+        <div class="chosen" id="chosenWrap" style="display:none;">
+          Your passcode: <code id="chosenCode">••••••</code>
+        </div>
+
+        <div class="dots" id="dots" aria-label="Passcode dots"></div>
+        <div class="msg" id="msg" aria-live="polite"></div>
+
+        <div class="keypad scrambleShow" id="keypad" aria-label="Numeric keypad"></div>
+
+        <div class="bottomRow">
+          <button type="button" id="emergencyBtn">Emergency</button>
+          <button type="button" id="cancelBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="panel">
+      <h2>Keypad layout</h2>
+
+      <div class="segmented" role="tablist" aria-label="Keypad mode" id="layoutSegment">
+        <button type="button" id="modeNormal" class="active" role="tab" aria-selected="true">Normal</button>
+        <button type="button" id="modeScrambled" role="tab" aria-selected="false">Scrambled</button>
+      </div>
+
+      <p class="mini">
+        <b>Privacy:</b> your passcode isn’t stored anywhere (no server, no localStorage). It only lives in memory while this tab is open.
+      </p>
+
+      <div class="row">
+        <button class="btn" id="newPassBtn" type="button">New passcode</button>
+        <button class="btn" id="resetBtn" type="button">Reset entry</button>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="trialBtn" type="button">Time trial mode</button>
+      </div>
+
+      <div class="row">
+        <button class="btn btn-danger btn-large" id="resetAllBtn" type="button">Reset everything</button>
+      </div>
+
+      <div class="resultBox" id="trialResults"></div>
+    </aside>
+  </div>
+
+  <!-- Intro modal -->
+  <div class="modalOverlay" id="introModal" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+    <div class="modal">
+      <h3 id="introTitle">How to use this demo</h3>
+      <p>
+        1) Set a 6-digit passcode.<br/>
+        2) Enter it again to feel the keypad.<br/>
+        3) Switch the keypad layout to <b>Normal</b> or <b>Scrambled</b> in the sidebar.
+      </p>
+      <p style="margin: 0 6px 10px; color: rgba(255,255,255,0.74); font-size: 13px; line-height: 1.45;">
+        Use a <b>touch screen</b> or your <b>mouse</b> for the best feel (avoid typing numbers on your keyboard).
+        Then try <b>Time trial mode</b> for a stronger comparison.
+      </p>
+      <div class="actions">
+        <button class="btn primary" id="introOk">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trial setup -->
+  <div class="modalOverlay" id="trialModal" role="dialog" aria-modal="true" aria-labelledby="trialTitle">
+    <div class="modal">
+      <h3 id="trialTitle">Time trial mode</h3>
+      <p>You’ll do <b>3 passcodes</b>. For each one: Normal (timed) → Scrambled (timed).</p>
+
+      <div class="choiceGroup" role="radiogroup" aria-label="Trial passcode source">
+        <label class="choice">
+          <input type="radio" name="trialSource" value="self" checked />
+          <div>
+            <b>I’ll choose my own passcodes</b><br/>
+            <span style="color: rgba(255,255,255,0.68);">You set a new passcode each round.</span>
+          </div>
+        </label>
+        <label class="choice">
+          <input type="radio" name="trialSource" value="random" />
+          <div>
+            <b>Give me random passcodes</b><br/>
+            <span style="color: rgba(255,255,255,0.68);">We generate a new 6-digit code each round.</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button class="btn ghost" id="trialCancel">Cancel</button>
+        <button class="btn primary" id="trialOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trial completion popup -->
+  <div class="modalOverlay" id="doneModal" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
+    <div class="modal">
+      <h3 id="doneTitle">Time trial results</h3>
+      <p id="doneBody" style="margin-bottom:12px;"></p>
+      <div class="actions">
+        <button class="btn primary" id="doneOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const MODE = { PLAY:"play", TRIAL:"trial" };
+    const STEP = {
+      PLAY_SET:"play_set",
+      PLAY_ENTER:"play_enter",
+      TRIAL_SET:"trial_set",
+      TRIAL_NORMAL:"trial_normal",
+      TRIAL_SCRAMBLED:"trial_scrambled",
+      TRIAL_DONE:"trial_done"
+    };
+
+    const STATE = {
+      mode: MODE.PLAY,
+      step: STEP.PLAY_SET,
+
+      layout: "normal",
+      chosenPasscode: "",
+      entered: "",
+
+      scrambledDigits: [],
+
+      // guidance
+      hasTriedPasscode: false,
+      hasCorrectScrambledEntry: false,
+      scrambleNudgeShown: false,
+      trialNudgeShown: false,
+
+      attnTimers: new Map(),
+
+      // timing
+      attemptStartMs: null,
+
+      // trial
+      trialIndex: 0,
+      trialNormalMs: [],
+      trialScrambledMs: [],
+      trialSource: "self"
+    };
+
+    // Elements
+    const keypadEl = document.getElementById("keypad");
+    const dotsEl = document.getElementById("dots");
+    const msgEl = document.getElementById("msg");
+    const titleEl = document.getElementById("screenTitle");
+    const subtitleEl = document.getElementById("screenSubtitle");
+    const chosenWrap = document.getElementById("chosenWrap");
+    const chosenCodeEl = document.getElementById("chosenCode");
+
+    const layoutSegment = document.getElementById("layoutSegment");
+    const modeNormalBtn = document.getElementById("modeNormal");
+    const modeScrambledBtn = document.getElementById("modeScrambled");
+
+    const newPassBtn = document.getElementById("newPassBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const trialBtn = document.getElementById("trialBtn");
+    const resetAllBtn = document.getElementById("resetAllBtn");
+    const trialResults = document.getElementById("trialResults");
+
+    const cancelBtn = document.getElementById("cancelBtn");
+    const emergencyBtn = document.getElementById("emergencyBtn");
+
+    // Modals
+    const introModal = document.getElementById("introModal");
+    const introOk = document.getElementById("introOk");
+
+    const trialModal = document.getElementById("trialModal");
+    const trialOk = document.getElementById("trialOk");
+    const trialCancel = document.getElementById("trialCancel");
+
+    const doneModal = document.getElementById("doneModal");
+    const doneOk = document.getElementById("doneOk");
+    const doneBody = document.getElementById("doneBody");
+
+    const LETTERS = {
+      1: "", 2: "ABC", 3: "DEF",
+      4: "GHI", 5: "JKL", 6: "MNO",
+      7: "PQRS", 8: "TUV", 9: "WXYZ",
+      0: ""
+    };
+
+    function shuffle(arr){
+      const a = arr.slice();
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+    function setMessage(text, kind){
+      msgEl.textContent = text || "";
+      msgEl.classList.remove("bad","good");
+      if(kind) msgEl.classList.add(kind);
+    }
+    function renderDots(){
+      dotsEl.innerHTML = "";
+      for(let i=0;i<6;i++){
+        const d = document.createElement("div");
+        d.className = "dot" + (i < STATE.entered.length ? " filled" : "");
+        dotsEl.appendChild(d);
+      }
+    }
+    function showChosen(show){
+      chosenWrap.style.display = show ? "block" : "none";
+      if(show) chosenCodeEl.textContent = STATE.chosenPasscode;
+    }
+    function formatMs(ms){ return `${(ms/1000).toFixed(3)}s`; }
+    function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+    function pctSlower(normalMs, scrambledMs){
+      if(!normalMs || normalMs <= 0) return null;
+      return ((scrambledMs - normalMs) / normalMs) * 100;
+    }
+    function randomPasscode(){
+      return String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
+    }
+
+    function isScrambledLayoutActive(){
+      if(STATE.mode === MODE.PLAY && STATE.step === STEP.PLAY_ENTER){
+        return STATE.layout === "scrambled";
+      }
+      if(STATE.mode === MODE.TRIAL && STATE.step === STEP.TRIAL_SCRAMBLED) return true;
+      return false;
+    }
+
+    function currentKeyLayout(){
+      const scrambled = isScrambledLayoutActive();
+      if(!scrambled) return [1,2,3,4,5,6,7,8,9,null,0,null];
+
+      if(STATE.scrambledDigits.length !== 10){
+        STATE.scrambledDigits = shuffle([0,1,2,3,4,5,6,7,8,9]);
+      }
+      const topNine = STATE.scrambledDigits.slice(0,9);
+      const last = STATE.scrambledDigits[9];
+      return [...topNine, null, last, null];
+    }
+
+    function buildKey(digit){
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "key";
+      if(digit === null){
+        btn.classList.add("empty");
+        btn.tabIndex = -1;
+        return btn;
+      }
+      const num = document.createElement("div");
+      num.className = "num";
+      num.textContent = String(digit);
+
+      const letters = document.createElement("div");
+      letters.className = "letters";
+      letters.textContent = LETTERS[digit] || "";
+
+      btn.appendChild(num);
+      btn.appendChild(letters);
+      btn.addEventListener("click", () => pressDigit(digit));
+      return btn;
+    }
+
+    function renderKeypad(){
+      keypadEl.innerHTML = "";
+      currentKeyLayout().forEach(d => keypadEl.appendChild(buildKey(d)));
+      keypadEl.classList.add("scrambleShow");
+    }
+
+    function scrambleAllAtOnce(){
+      if(!isScrambledLayoutActive()) return;
+
+      keypadEl.classList.remove("scrambleShow");
+      keypadEl.classList.add("scrambleFlash");
+
+      STATE.scrambledDigits = shuffle([0,1,2,3,4,5,6,7,8,9]);
+
+      setTimeout(() => {
+        renderKeypad();
+        keypadEl.classList.remove("scrambleFlash");
+        keypadEl.classList.add("scrambleShow");
+      }, 120);
+    }
+
+    function resetEntry({keepMessage=false} = {}){
+      STATE.entered = "";
+      STATE.attemptStartMs = null;
+      renderDots();
+      if(!keepMessage) setMessage("");
+    }
+
+    function startTimerIfNeeded(){
+      if(STATE.attemptStartMs !== null) return;
+      const timed = (STATE.mode === MODE.TRIAL) &&
+        (STATE.step === STEP.TRIAL_NORMAL || STATE.step === STEP.TRIAL_SCRAMBLED);
+      if(timed) STATE.attemptStartMs = performance.now();
+    }
+
+    function stopTimerMs(){
+      const end = performance.now();
+      return Math.max(0, end - (STATE.attemptStartMs ?? end));
+    }
+
+    function updateScreenCopy(){
+      if(STATE.mode === MODE.PLAY){
+        if(STATE.step === STEP.PLAY_SET){
+          titleEl.textContent = "Set a Passcode";
+          subtitleEl.textContent = "Enter a 6-digit passcode to test.";
+          showChosen(false);
+        } else {
+          titleEl.textContent = "Enter Passcode";
+          subtitleEl.textContent = (STATE.layout === "scrambled")
+            ? "Scrambled layout is ON. Enter your passcode (it reshuffles after each attempt)."
+            : "Normal layout is ON. Enter your passcode.";
+          showChosen(true);
+        }
+      } else {
+        titleEl.textContent = `Trial ${STATE.trialIndex + 1} of 3`;
+
+        if(STATE.trialSource === "random"){
+          subtitleEl.textContent =
+            (STATE.step === STEP.TRIAL_NORMAL)
+              ? "Enter the shown passcode on Normal (timed)."
+              : (STATE.step === STEP.TRIAL_SCRAMBLED)
+                ? "Now enter it again on Scrambled (timed)."
+                : "See results on the right.";
+          showChosen(STATE.step !== STEP.TRIAL_DONE);
+        } else {
+          if(STATE.step === STEP.TRIAL_SET){
+            subtitleEl.textContent = "Set a new 6-digit passcode for this trial.";
+            showChosen(false);
+          } else if(STATE.step === STEP.TRIAL_NORMAL){
+            subtitleEl.textContent = "Enter the passcode on Normal (timed).";
+            showChosen(true);
+          } else if(STATE.step === STEP.TRIAL_SCRAMBLED){
+            subtitleEl.textContent = "Now enter it again on Scrambled (timed).";
+            showChosen(true);
+          } else {
+            subtitleEl.textContent = "See results on the right.";
+            showChosen(false);
+          }
+        }
+      }
+    }
+
+    // Pulse helpers
+    function pulseUntilInteracted(el, key, maxMs=30000){
+      clearPulse(el, key);
+      el.classList.add("attn");
+      const t = setTimeout(() => {
+        el.classList.remove("attn");
+        STATE.attnTimers.delete(key);
+      }, maxMs);
+      STATE.attnTimers.set(key, t);
+    }
+    function clearPulse(el, key){
+      const t = STATE.attnTimers.get(key);
+      if(t) clearTimeout(t);
+      STATE.attnTimers.delete(key);
+      el.classList.remove("attn");
+    }
+    layoutSegment.addEventListener("pointerdown", () => clearPulse(layoutSegment, "layout"));
+    trialBtn.addEventListener("pointerdown", () => clearPulse(trialBtn, "trial"));
+
+    function highlightLayoutToggle(){
+      if(STATE.scrambleNudgeShown) return;
+      STATE.scrambleNudgeShown = true;
+      pulseUntilInteracted(layoutSegment, "layout", 30000);
+    }
+    function highlightTimeTrial(){
+      if(STATE.trialNudgeShown) return;
+      STATE.trialNudgeShown = true;
+      pulseUntilInteracted(trialBtn, "trial", 30000);
+    }
+
+    function showTrialResultsAndPopup(){
+      const avgN = avg(STATE.trialNormalMs);
+      const avgS = avg(STATE.trialScrambledMs);
+      const pct = -pctSlower(avgN, avgS);
+      const pctTxt = (pct == null) ? "—" : `${pct.toFixed(1)}%`;
+
+      const html = `
+        <b>Trial results</b><br/>
+        Normal avg: <b>${formatMs(avgN)}</b><br/>
+        Scrambled avg: <b>${formatMs(avgS)}</b><br/>
+        Percent slower (scrambled): <b>${pctTxt}</b>
+      `;
+
+      trialResults.innerHTML = html;
+      trialResults.classList.add("show");
+
+      doneBody.innerHTML = html.replace("<b>Trial results</b><br/>", "");
+      openModal(doneModal);
+    }
+
+    function clearTrialResults(){
+      trialResults.classList.remove("show");
+      trialResults.innerHTML = "";
+    }
+
+    // Input flow
+    function pressDigit(d){
+      if(introModal.classList.contains("show")) return;
+      if(trialModal.classList.contains("show")) return;
+      if(doneModal.classList.contains("show")) return;
+
+      if(STATE.entered.length >= 6) return;
+
+      startTimerIfNeeded();
+
+      STATE.entered += String(d);
+      renderDots();
+      if (navigator.vibrate) navigator.vibrate(8);
+
+      if(STATE.entered.length === 6) handleSixDigits();
+    }
+
+    function handleSixDigits(){
+      // PLAY
+      if(STATE.mode === MODE.PLAY){
+        if(STATE.step === STEP.PLAY_SET){
+          STATE.chosenPasscode = STATE.entered;
+          setMessage("Passcode set.", "good");
+          STATE.step = STEP.PLAY_ENTER;
+          resetEntry({keepMessage:true});
+          updateScreenCopy();
+          renderKeypad();
+          setTimeout(() => setMessage(""), 450);
+          return;
+        }
+
+        const ok = (STATE.entered === STATE.chosenPasscode);
+        if(!ok){
+          setMessage("Incorrect passcode. Try again.", "bad");
+          if(isScrambledLayoutActive()) scrambleAllAtOnce();
+          setTimeout(() => resetEntry(), 320);
+          return;
+        }
+
+        setMessage("Correct.", "good");
+
+        if(!STATE.hasTriedPasscode){
+          STATE.hasTriedPasscode = true;
+          highlightLayoutToggle();
+        }
+
+        if(isScrambledLayoutActive() && !STATE.hasCorrectScrambledEntry){
+          STATE.hasCorrectScrambledEntry = true;
+          highlightTimeTrial();
+        }
+
+        if(isScrambledLayoutActive()) scrambleAllAtOnce();
+        setTimeout(() => { setMessage(""); resetEntry({keepMessage:true}); }, 380);
+        return;
+      }
+
+      // TRIAL
+      if(STATE.mode === MODE.TRIAL){
+        if(STATE.trialSource === "self" && STATE.step === STEP.TRIAL_SET){
+          STATE.chosenPasscode = STATE.entered;
+          setMessage("Passcode set for this trial.", "good");
+
+          STATE.step = STEP.TRIAL_NORMAL;
+          resetEntry({keepMessage:true});
+          updateScreenCopy();
+          renderKeypad();
+          setTimeout(() => setMessage(""), 450);
+          return;
+        }
+
+        if(STATE.step === STEP.TRIAL_NORMAL){
+          const ok = (STATE.entered === STATE.chosenPasscode);
+          if(!ok){
+            setMessage("Incorrect. Try again (Normal).", "bad");
+            setTimeout(() => resetEntry(), 320);
+            return;
+          }
+
+          const ms = stopTimerMs();
+          STATE.trialNormalMs.push(ms);
+          setMessage(`Normal: ${formatMs(ms)}`, "good");
+
+          STATE.step = STEP.TRIAL_SCRAMBLED;
+          resetEntry({keepMessage:true});
+          updateScreenCopy();
+
+          STATE.scrambledDigits = shuffle([0,1,2,3,4,5,6,7,8,9]);
+          renderKeypad();
+          setTimeout(() => setMessage(""), 550);
+          return;
+        }
+
+        if(STATE.step === STEP.TRIAL_SCRAMBLED){
+          const ok = (STATE.entered === STATE.chosenPasscode);
+          if(!ok){
+            setMessage("Incorrect. Try again (Scrambled).", "bad");
+            scrambleAllAtOnce();
+            setTimeout(() => resetEntry(), 320);
+            return;
+          }
+
+          const ms = stopTimerMs();
+          STATE.trialScrambledMs.push(ms);
+          setMessage(`Scrambled: ${formatMs(ms)}`, "good");
+
+          if(STATE.trialIndex < 2){
+            STATE.trialIndex += 1;
+            resetEntry({keepMessage:true});
+
+            if(STATE.trialSource === "random"){
+              STATE.chosenPasscode = randomPasscode();
+              STATE.step = STEP.TRIAL_NORMAL;
+              updateScreenCopy();
+              renderKeypad();
+              setTimeout(() => { setMessage("Next passcode.", ""); }, 380);
+              setTimeout(() => setMessage(""), 900);
+              return;
+            } else {
+              STATE.chosenPasscode = "";
+              STATE.step = STEP.TRIAL_SET;
+              updateScreenCopy();
+              renderKeypad();
+              setTimeout(() => { setMessage("Next passcode.", ""); }, 380);
+              setTimeout(() => setMessage(""), 900);
+              return;
+            }
+          }
+
+          STATE.step = STEP.TRIAL_DONE;
+          resetEntry({keepMessage:true});
+          updateScreenCopy();
+          renderKeypad();
+          setMessage("Trial complete.", "good");
+          showTrialResultsAndPopup();
+          return;
+        }
+      }
+    }
+
+    // Layout segmented
+    function setLayout(layout){
+      STATE.layout = layout;
+
+      modeNormalBtn.classList.toggle("active", layout === "normal");
+      modeScrambledBtn.classList.toggle("active", layout === "scrambled");
+      modeNormalBtn.setAttribute("aria-selected", layout === "normal" ? "true" : "false");
+      modeScrambledBtn.setAttribute("aria-selected", layout === "scrambled" ? "true" : "false");
+
+      if(STATE.mode === MODE.PLAY && STATE.step === STEP.PLAY_ENTER){
+        if(layout === "scrambled"){
+          scrambleAllAtOnce();
+        } else {
+          STATE.scrambledDigits = [];
+          renderKeypad();
+        }
+        updateScreenCopy();
+      }
+    }
+    modeNormalBtn.addEventListener("click", () => setLayout("normal"));
+    modeScrambledBtn.addEventListener("click", () => setLayout("scrambled"));
+
+    // Buttons
+    function resetEntryOnly(){
+      setMessage("");
+      resetEntry();
+      if(isScrambledLayoutActive()) scrambleAllAtOnce();
+    }
+
+    function resetAllToFreshSession(){
+      // stop pulses
+      clearPulse(layoutSegment, "layout");
+      clearPulse(trialBtn, "trial");
+
+      // close any modals
+      closeModal(doneModal);
+      closeModal(trialModal);
+      closeModal(introModal);
+
+      // clear results
+      clearTrialResults();
+
+      // hard reset state
+      STATE.mode = MODE.PLAY;
+      STATE.step = STEP.PLAY_SET;
+
+      STATE.layout = "normal";
+      STATE.chosenPasscode = "";
+      STATE.entered = "";
+      STATE.scrambledDigits = [];
+
+      STATE.hasTriedPasscode = false;
+      STATE.hasCorrectScrambledEntry = false;
+      STATE.scrambleNudgeShown = false;
+      STATE.trialNudgeShown = false;
+
+      STATE.attemptStartMs = null;
+
+      STATE.trialIndex = 0;
+      STATE.trialNormalMs = [];
+      STATE.trialScrambledMs = [];
+      STATE.trialSource = "self";
+
+      // UI reset
+      setLayout("normal");
+      setMessage("");
+      renderDots();
+      renderKeypad();
+      updateScreenCopy();
+      showChosen(false);
+
+      // show intro again (like a new session)
+      openModal(introModal);
+    }
+
+    newPassBtn.addEventListener("click", () => {
+      // keep as "new passcode" convenience (doesn't reopen intro)
+      clearTrialResults();
+      STATE.chosenPasscode = "";
+      STATE.entered = "";
+      STATE.attemptStartMs = null;
+      STATE.scrambledDigits = [];
+      STATE.mode = MODE.PLAY;
+      STATE.step = STEP.PLAY_SET;
+      setLayout("normal");
+      setMessage("");
+      renderDots();
+      updateScreenCopy();
+      renderKeypad();
+      showChosen(false);
+
+      // also reset guidance so highlight flow can happen again
+      STATE.hasTriedPasscode = false;
+      STATE.hasCorrectScrambledEntry = false;
+      STATE.scrambleNudgeShown = false;
+      STATE.trialNudgeShown = false;
+      clearPulse(layoutSegment, "layout");
+      clearPulse(trialBtn, "trial");
+    });
+
+    resetBtn.addEventListener("click", () => resetEntryOnly());
+    resetAllBtn.addEventListener("click", () => resetAllToFreshSession());
+
+    // Modal helpers
+    function openModal(el){
+      el.classList.add("show");
+      const btn = el.querySelector(".primary") || el.querySelector("button");
+      if(btn) setTimeout(() => btn.focus(), 0);
+    }
+    function closeModal(el){ el.classList.remove("show"); }
+
+    // Time trial
+    trialBtn.addEventListener("click", () => openModal(trialModal));
+    trialCancel.addEventListener("click", () => closeModal(trialModal));
+    trialModal.addEventListener("click", (e) => { if(e.target === trialModal) closeModal(trialModal); });
+
+    trialOk.addEventListener("click", () => {
+      const selected = document.querySelector('input[name="trialSource"]:checked')?.value || "self";
+      STATE.trialSource = selected;
+      closeModal(trialModal);
+      startTrial();
+    });
+
+    function startTrial(){
+      clearTrialResults();
+      clearPulse(trialBtn, "trial");
+
+      STATE.mode = MODE.TRIAL;
+      STATE.trialIndex = 0;
+      STATE.trialNormalMs = [];
+      STATE.trialScrambledMs = [];
+
+      setLayout("normal");
+
+      if(STATE.trialSource === "random"){
+        STATE.chosenPasscode = randomPasscode();
+        STATE.step = STEP.TRIAL_NORMAL;
+      } else {
+        STATE.chosenPasscode = "";
+        STATE.step = STEP.TRIAL_SET;
+      }
+
+      setMessage("");
+      resetEntry({keepMessage:true});
+      updateScreenCopy();
+      renderKeypad();
+    }
+
+    // Intro modal
+    introOk.addEventListener("click", () => closeModal(introModal));
+    introModal.addEventListener("click", (e) => { if(e.target === introModal) closeModal(introModal); });
+
+    // Done modal
+    doneOk.addEventListener("click", () => closeModal(doneModal));
+    doneModal.addEventListener("click", (e) => { if(e.target === doneModal) closeModal(doneModal); });
+
+    // Cancel / Emergency
+    cancelBtn.addEventListener("click", () => resetEntryOnly());
+    emergencyBtn.addEventListener("click", () => {
+      setMessage("Emergency screen (demo)", "");
+      setTimeout(() => setMessage(""), 650);
+    });
+
+    // time pill
+    function updateTime(){
+      const now = new Date();
+      let h = now.getHours();
+      const m = now.getMinutes().toString().padStart(2,"0");
+      h = h % 12; if(h === 0) h = 12;
+      document.getElementById("timePill").textContent = `${h}:${m}`;
+    }
+
+    // Init
+    (function init(){
+      renderDots();
+      renderKeypad();
+      setLayout("normal");
+      updateScreenCopy();
+      updateTime();
+      setInterval(updateTime, 10_000);
+      openModal(introModal);
+    })();
+  </script>
+</body>
+</html>
